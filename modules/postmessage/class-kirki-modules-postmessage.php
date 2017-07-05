@@ -92,11 +92,9 @@ class Kirki_Modules_PostMessage {
 	 */
 	protected function script( $args ) {
 
-		$script = 'wp.customize(\'' . $args['settings'] . '\',function(value){value.bind(function(newval){';
-		// append unique style tag if not exist
-		// The style ID.
 		$style_id = 'kirki-postmessage-' . str_replace( array( '[', ']' ), '', $args['settings'] );
-		$script .= 'if(null===document.getElementById(\'' . $style_id . '\')||\'undefined\'===typeof document.getElementById(\'' . $style_id . '\')){jQuery(\'head\').append(\'<style id="' . $style_id . '"></style>\');}';
+		$script = "wp.customize('{$args['settings']}',function(value){value.bind(function(newval){";
+		$script .= "if(null===document.getElementById('{$style_id}')||'undefined'===typeof document.getElementById('{$style_id}')){jQuery('head').append('<style id=\"{$style_id}\"></style>');}";
 
 		// Add anything we need before the main script.
 		$script .= $this->before_script( $args );
@@ -122,7 +120,7 @@ class Kirki_Modules_PostMessage {
 					$js_var['element'] = implode( ',', $js_var['element'] );
 				}
 				// Replace single quotes with double quotes to avoid issues with the compiled JS.
-				$js_var['element'] = str_replace( '\'', '"', $js_var['element'] );
+				$js_var['element'] = str_replace( "'", '"', $js_var['element'] );
 			}
 			if ( isset( $js_var['function'] ) && 'html' === $js_var['function'] ) {
 				$script .= $this->script_html_var( $js_var );
@@ -142,7 +140,7 @@ class Kirki_Modules_PostMessage {
 			$combo_extra_script .= $script_array['script'];
 			$combo_css_script   .= ( 'css' !== $combo_css_script ) ? $script_array['css'] : '';
 		}
-		$text = ( 'css' === $combo_css_script ) ? 'css' : '\'' . $combo_css_script . '\'';
+		$text = ( 'css' === $combo_css_script ) ? 'css' : "'{$combo_css_script}'";
 
 		$script .= $combo_extra_script;
 		$script .= "var cssContent={$text};";
@@ -200,7 +198,7 @@ class Kirki_Modules_PostMessage {
 
 		// Tweak to add url() for background-images.
 		if ( 'background-image' === $args['property'] && ( ! isset( $args['value_pattern'] ) || false === strpos( $args['value_pattern'], 'gradient' ) ) ) {
-			$script .= 'if(-1===' . $value_key . '.indexOf(\'url(\')){' . $value_key . '=\'url("\'+' . $value_key . '+\'")\';}';
+			$script .= "if(-1==={$value_key}.indexOf('url(')){{$value_key}='url(\"'+{$value_key}+'\")';}";
 		}
 
 		// Apply prefix.
@@ -208,7 +206,7 @@ class Kirki_Modules_PostMessage {
 		if ( '' !== $args['prefix'] ) {
 			$value = $args['prefix'] . '+' . $value_key;
 		}
-		$css = $args['element'] . '{' . $args['property'] . ':\'+' . $value . '+\'' . $args['units'] . $args['suffix'] . ';}';
+		$css = "{$args['element']}{{$args['property']}:'+{$value}+'{$args['units']}{$args['suffix']};}";
 		if ( isset( $args['media_query'] ) ) {
 			$css = $args['media_query'] . '{' . $css . '}';
 		}
@@ -227,7 +225,7 @@ class Kirki_Modules_PostMessage {
 	 */
 	protected function script_var_array( $args ) {
 
-		$script = ( 0 === $args['index_key'] ) ? 'css=\'\';' : '';
+		$script = ( 0 === $args['index_key'] ) ? "css='';" : '';
 		$property_script = '';
 
 		// Define choice.
@@ -251,39 +249,39 @@ class Kirki_Modules_PostMessage {
 
 		// Tweak to add url() for background-images.
 		if ( '' === $choice || 'background-image' === $choice ) {
-			$script .= 'if(\'background-image\'===\'' . $args['property'] . '\'||\'background-image\'===subKey){';
-			$script .= 'if(-1===subValue.indexOf(\'url(\')){subValue=\'url("\'+subValue+\'")\';}';
+			$script .= "if('background-image'==='{$args['property']}'||'background-image'===subKey){";
+			$script .= "if(-1===subValue.indexOf('url(')){subValue='url(\"'+subValue+'\")';}";
 			$script .= '}';
 		}
 
 		// Apply prefix.
 		$value = $value_key;
 		if ( '' !== $args['prefix'] ) {
-			$value = '\'' . $args['prefix'] . '\'+subValue';
+			$value = "'{$args['prefix']}'+subValue";
 		}
 
 		// Mostly used for padding, margin & position properties.
-		$direction_script  = 'if(_.contains([\'top\',\'bottom\',\'left\',\'right\'],subKey)){';
-		$direction_script .= 'css+=\'' . $args['element'] . '{' . $args['property'] . '-\'+subKey+\':\'+subValue+\'' . $args['units'] . $args['suffix'] . ';}\';}';
+		$direction_script  = "if(_.contains(['top','bottom','left','right'],subKey)){";
+		$direction_script .= "css+='{$args['element']}{{$args['property']}-'+subKey+':'+subValue+'{$args['units']}{$args['suffix']};}';}";
 		// Allows us to apply this just for a specific choice in the array of the values.
 		if ( '' !== $choice ) {
 			$choice_is_direction = ( false !== strpos( $choice, 'top' ) || false !== strpos( $choice, 'bottom' ) || false !== strpos( $choice, 'left' ) || false !== strpos( $choice, 'right' ) );
-			$script .= 'if(\'' . $choice . '\'===subKey){';
+			$script .= "if('{$choice}'===subKey){";
 			$script .= ( $choice_is_direction ) ? $direction_script . 'else{' : '';
-			$script .= 'css+=\'' . $args['element'] . '{' . $args['property'] . ':\'+subValue+\';}\';';
+			$script .= "css+='{$args['element']}{{$args['property']}:'+subValue+';}';";
 			$script .= ( $choice_is_direction ) ? '}' : '';
 			$script .= '}';
 		} else {
 			$script .= $direction_script . 'else{';
 
 			// This is where most object-based fields will go.
-			$script .= 'css+=\'' . $args['element'] . '{\'+subKey+\':\'+subValue+\'' . $args['units'] . $args['suffix'] . ';}\';';
+			$script .= "css+='{$args['element']}{'+subKey+':'+subValue+'{$args['units']}{$args['suffix']};}';";
 			$script .= '}';
 		}
 		$script .= '});';
 
 		if ( isset( $args['media_query'] ) ) {
-			$script .= 'css=\'' . $args['media_query'] . '{\'+css+\'}\';';
+			$script .= "css='{$args['media_query']}{'+css+'}';";
 		}
 
 		return array(
@@ -307,7 +305,7 @@ class Kirki_Modules_PostMessage {
 
 		// Load the font using WenFontloader.
 		// This is a bit ugly because wp_add_inline_script doesn't allow adding <script> directly.
-		$webfont_loader = 'sc=\'a\';jQuery(\'head\').append(sc.replace(\'a\',\'<\')+\'script>if(!_.isUndefined(WebFont)&&fontFamily){WebFont.load({google:{families:["\'+fontFamily.replace( /\"/g, \'&quot;\' )+\':\'+variant+subsetsString+\'"]}});}\'+sc.replace(\'a\',\'<\')+\'/script>\');';
+		$webfont_loader = "sc='a';jQuery('head').append(sc.replace('a','<')+'script>if(!_.isUndefined(WebFont)&&fontFamily){WebFont.load({google:{families:[\"'+fontFamily.replace( /\"/g, '&quot;' )+':'+variant+subsetsString+'\"]}});}'+sc.replace('a','<')+'/script>');";
 
 		// Add the css.
 		$css_build_array = array(
@@ -346,15 +344,15 @@ class Kirki_Modules_PostMessage {
 			$script .= ( $choice_condition && 'font-family' === $args['choice'] ) ? $webfont_loader : '';
 
 			if ( 'font-family' === $property || ( isset( $args['choice'] ) && 'font-family' === $args['choice'] ) ) {
-				$css .= 'fontFamilyCSS=fontFamily;if(0<fontFamily.indexOf(\' \')&&-1===fontFamily.indexOf(\'"\')){fontFamilyCSS=\'"\'+fontFamily+\'"\';}';
+				$css .= "fontFamilyCSS=fontFamily;if(0<fontFamily.indexOf(' ')&&-1===fontFamily.indexOf('\"')){fontFamilyCSS='\"'+fontFamily+'\"';}";
 				$var = 'fontFamilyCSS';
 			}
-			$css .= 'css+=(\'\'!==' . $var . ')?\'' . $args['element'] . '\'+\'{' . $property . ':\'+' . $var . '+\';}\':\'\';';
+			$css .= "css+=(''!=={$var})?'{$args['element']}'+'{{$property}:'+{$var}+';}':'';";
 		}
 
 		$script .= $css;
 		if ( isset( $args['media_query'] ) ) {
-			$script .= 'css=\'' . $args['media_query'] . '{\'+css+\'}\';';
+			$script .= "css='{$args['media_query']}{'+css+'}';";
 		}
 		return array(
 			'script' => $script,
@@ -392,22 +390,22 @@ class Kirki_Modules_PostMessage {
 		if ( isset( $args['type'] ) ) {
 			switch ( $args['type'] ) {
 				case 'kirki-typography':
-					$script .= 'fontFamily=(_.isUndefined(newval[\'font-family\']))?\'\':newval[\'font-family\'];';
-					$script .= 'variant=(_.isUndefined(newval.variant))?\'400\':newval.variant;';
-					$script .= 'subsets=(_.isUndefined(newval.subsets))?[]:newval.subsets;';
-					$script .= 'subsetsString=(_.isObject(newval.subsets))?\':\'+newval.subsets.join(\',\'):\'\';';
-					$script .= 'fontSize=(_.isUndefined(newval[\'font-size\']))?\'\':newval[\'font-size\'];';
-					$script .= 'lineHeight=(_.isUndefined(newval[\'line-height\']))?\'\':newval[\'line-height\'];';
-					$script .= 'letterSpacing=(_.isUndefined(newval[\'letter-spacing\']))?\'\':newval[\'letter-spacing\'];';
-					$script .= 'wordSpacing=(_.isUndefined(newval[\'word-spacing\']))?\'\':newval[\'word-spacing\'];';
-					$script .= 'textAlign=(_.isUndefined(newval[\'text-align\']))?\'\':newval[\'text-align\'];';
-					$script .= 'textTransform=(_.isUndefined(newval[\'text-transform\']))?\'\':newval[\'text-transform\'];';
-					$script .= 'color=(_.isUndefined(newval.color))?\'\':newval.color;';
+					$script .= "fontFamily=(_.isUndefined(newval['font-family']))?'':newval['font-family'];";
+					$script .= "variant=(_.isUndefined(newval.variant))?'400':newval.variant;";
+					$script .= "subsets=(_.isUndefined(newval.subsets))?[]:newval.subsets;";
+					$script .= "subsetsString=(_.isObject(newval.subsets))?':'+newval.subsets.join(','):'';";
+					$script .= "fontSize=(_.isUndefined(newval['font-size']))?'':newval['font-size'];";
+					$script .= "lineHeight=(_.isUndefined(newval['line-height']))?'':newval['line-height'];";
+					$script .= "letterSpacing=(_.isUndefined(newval['letter-spacing']))?'':newval['letter-spacing'];";
+					$script .= "wordSpacing=(_.isUndefined(newval['word-spacing']))?'':newval['word-spacing'];";
+					$script .= "textAlign=(_.isUndefined(newval['text-align']))?'':newval['text-align'];";
+					$script .= "textTransform=(_.isUndefined(newval['text-transform']))?'':newval['text-transform'];";
+					$script .= "color=(_.isUndefined(newval.color))?'':newval.color;";
 
-					$script .= 'fw=(!_.isString(newval.variant))?\'400\':newval.variant.match(/\d/g);';
-					$script .= 'fontWeight=(!_.isObject(fw))?400:fw.join(\'\');';
-					$script .= 'fontStyle=(-1!==variant.indexOf(\'italic\'))?\'italic\':\'normal\';';
-					$script .= 'css=\'\';';
+					$script .= "fw=(!_.isString(newval.variant))?'400':newval.variant.match(/\d/g);";
+					$script .= "fontWeight=(!_.isObject(fw))?400:fw.join('');";
+					$script .= "fontStyle=(-1!==variant.indexOf('italic'))?'italic':'normal';";
+					$script .= "css='';";
 					break;
 			}
 		}
@@ -467,15 +465,15 @@ class Kirki_Modules_PostMessage {
 		if ( isset( $js_vars['pattern_replace'] ) ) {
 			$script .= 'settings=window.wp.customize.get();';
 			foreach ( $js_vars['pattern_replace'] as $search => $replace ) {
-				$replace = '\'+settings["' . $replace . '"]+\'';
+				$replace = "'+settings['{$replace}']+";
 				$value = str_replace( $search, $replace, $js_vars['value_pattern'] );
 				$value = trim( $value, '+' );
 			}
 		}
-		$value_compiled = str_replace( '$', '\'+' . $alias . '+\'', $value );
+		$value_compiled = str_replace( '$', "'+{$alias}+'", $value );
 		$value_compiled = trim( $value_compiled, '+' );
 
-		return $script . $alias . '=\'' . $value_compiled . '\';';
+		return "{$script}{$alias}='{$value_compiled}';";
 	}
 
 	/**
